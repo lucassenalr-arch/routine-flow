@@ -382,7 +382,8 @@ function createTaskHTML(task) {
     saude: '💪 Saúde',
     estudo: '📚 Estudo',
     lazer: '☕ Lazer',
-    domestico: '🏠 Doméstico'
+    domestico: '🏠 Doméstico',
+    igreja: '⛪ Igreja'
   };
   const cat = task.category || 'trabalho';
   const catLabel = categoryLabels[cat] || '💼 Trabalho';
@@ -2462,7 +2463,8 @@ function updateCategoryBalance(todaysTasks) {
     saude: 0,
     estudo: 0,
     lazer: 0,
-    domestico: 0
+    domestico: 0,
+    igreja: 0
   };
 
   const categoryLabels = {
@@ -2470,7 +2472,8 @@ function updateCategoryBalance(todaysTasks) {
     saude: 'Saúde',
     estudo: 'Estudo',
     lazer: 'Lazer',
-    domestico: 'Doméstico'
+    domestico: 'Doméstico',
+    igreja: 'Igreja'
   };
 
   const categoryIcons = {
@@ -2478,7 +2481,8 @@ function updateCategoryBalance(todaysTasks) {
     saude: '💪',
     estudo: '📚',
     lazer: '☕',
-    domestico: '🏠'
+    domestico: '🏠',
+    igreja: '⛪'
   };
 
   let totalCatHours = 0;

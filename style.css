@@ -1750,6 +1750,11 @@ body {
   border: 1px solid rgba(100, 116, 139, 0.25);
   color: #cbd5e1;
 }
+.cat-igreja {
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.25);
+  color: #fef08a;
+}
 
 /* Barra de Equilíbrio de Categorias */
 .category-balance-bar {
@@ -1769,6 +1774,7 @@ body {
 .cat-segment.estudo { background: #f59e0b; }
 .cat-segment.lazer { background: #f43f5e; }
 .cat-segment.domestico { background: #64748b; }
+.cat-segment.igreja { background: #eab308; }
 
 .category-legends {
   display: flex;
@@ -1793,6 +1799,7 @@ body {
 .cat-legend-dot.estudo { background: #f59e0b; }
 .cat-legend-dot.lazer { background: #f43f5e; }
 .cat-legend-dot.domestico { background: #64748b; }
+.cat-legend-dot.igreja { background: #eab308; }
 
 /* Botões Delay Hover */
 .btn-delay:hover {
