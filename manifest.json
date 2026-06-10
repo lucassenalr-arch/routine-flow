@@ -1,0 +1,34 @@
+{
+  "name": "RoutineFlow",
+  "short_name": "RoutineFlow",
+  "description": "Seu gerenciador de rotina inteligente com controle de tempo e lembretes nativos.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Adicionar Afazer",
+      "short_name": "Novo Afazer",
+      "description": "Abre o app diretamente na tela de adicionar afazer rápido",
+      "url": "./index.html?shortcut=add-task",
+      "icons": [{ "src": "icon.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "Ver Widget",
+      "short_name": "Widget",
+      "description": "Abre o widget simplificado de hoje",
+      "url": "./index.html?shortcut=widget",
+      "icons": [{ "src": "icon.png", "sizes": "512x512" }]
+    }
+  ]
+}

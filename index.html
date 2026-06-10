@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RoutineFlow - Gerenciador de Rotina Inteligente</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon.png">
+  
+  <!-- Google Fonts & Icones -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Estilos principais -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Script do Lucide Icons para carregar os ícones modernos -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- Mockup do Celular (Centralizado em telas grandes, nativo em telas pequenas) -->
+  <div class="device-mockup" id="deviceMockup">
+    <div class="device-notch"></div>
+    <div class="device-screen">
+      
+      <!-- Barra de Status do Sistema Simulada -->
+      <div class="simulated-status-bar">
+        <span class="status-time" id="statusTime">12:00</span>
+        <div class="status-icons">
+          <i data-lucide="wifi" class="status-icon"></i>
+          <i data-lucide="signal" class="status-icon"></i>
+          <div class="simulated-battery">
+            <span class="battery-level"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notificação Toast (Pop-up em tempo real) -->
+      <div class="toast-notification" id="toastNotification">
+        <i data-lucide="bell" class="toast-icon"></i>
+        <div class="toast-content">
+          <h4 class="toast-title" id="toastTitle">Lembrete</h4>
+          <p class="toast-desc" id="toastDesc">Hora da sua tarefa!</p>
+        </div>
+      </div>
+
+      <!-- Banner de Permissão de Notificação -->
+      <div class="notification-banner" id="notificationBanner">
+        <div class="banner-info">
+          <i data-lucide="bell-ring" class="banner-icon"></i>
+          <div>
+            <h5>Lembretes Nativos</h5>
+            <p>Ative para receber avisos em segundo plano.</p>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-primary" id="btnEnableNotifications">Ativar</button>
+      </div>
+
+      <!-- CONTEÚDO DO APLICATIVO -->
+      <main class="app-container">
+        
+        <!-- Tela 1: Dashboard Principal -->
+        <section class="app-page active" id="page-dashboard">
+          <header class="app-header">
+            <div class="header-logo">
+              <span class="logo-dot"></span>
+              <h1>RoutineFlow</h1>
+            </div>
+            <div class="header-date" id="current-date">Sexta, 5 de Junho</div>
+          </header>
+
+          <div class="page-content">
+            <!-- Seletor de Perfis e Status de Sincronização -->
+            <div class="profile-selector-container">
+              <div class="profile-pills">
+                <button type="button" class="profile-pill active" data-profile="lucas">🙋‍♂️ Lucas</button>
+                <button type="button" class="profile-pill" data-profile="bia">🙋‍♀️ Bia</button>
+                <button type="button" class="profile-pill" data-profile="casal">💖 Casal</button>
+                <button type="button" class="profile-pill" data-profile="todos">🌎 Todos</button>
+              </div>
+              <div class="sync-indicator offline" id="sync-status" title="Sincronização Desativada">
+                <i data-lucide="cloud"></i>
+              </div>
+            </div>
+
+            <!-- Distribuição das 24 Horas do Dia -->
+            <div class="workload-card" id="workloadGaugeCard">
+              <div class="workload-header">
+                <h3>Minhas 24 Horas</h3>
+                <span class="workload-status" id="workloadStatusText">Tranquilo</span>
+              </div>
+              
+              <!-- Barra Segmentada de Distribuição -->
+              <div class="distribution-bar">
+                <div class="dist-segment dist-tasks" id="dist-tasks-segment" style="width: 20%;"></div>
+                <div class="dist-segment dist-sleep" id="dist-sleep-segment" style="width: 33.3%;"></div>
+                <div class="dist-segment dist-rest" id="dist-rest-segment" style="width: 46.7%;"></div>
+              </div>
+
+              <!-- Horário de Tempo Livre -->
+              <div class="free-time-indicator" id="freeTimeIndicator">
+                <i data-lucide="coffee"></i>
+                <span id="free-time-text">Calculando horário livre...</span>
+              </div>
+
+              <!-- Legendas com as Horas Reais -->
+              <div class="dist-legends">
+                <div class="legend-item">
+                  <span class="legend-dot dot-tasks"></span>
+                  <span>Afazeres: <strong id="lbl-tasks-h">0h</strong></span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot dot-sleep"></span>
+                  <span>Sono: <strong id="lbl-sleep-h">8h</strong></span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot dot-rest"></span>
+                  <span>Descanso (Total): <strong id="lbl-rest-h">0h</strong></span>
+                </div>
+              </div>
+
+              <!-- Barra de Equilíbrio de Categorias de Vida (Sugestão 3) -->
+              <div class="category-balance-section" style="margin-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 12px;">
+                <h4 style="font-size: 13px; font-weight: 500; margin-bottom: 8px; color: rgba(255,255,255,0.7); display: flex; justify-content: space-between;">
+                  <span>Equilíbrio de Categorias</span>
+                </h4>
+                <div class="category-balance-bar" id="category-balance-bar">
+                  <!-- Preenchido via JS -->
+                </div>
+                <div class="category-legends" id="category-legends">
+                  <!-- Legendas via JS -->
+                </div>
+              </div>
+
+              <!-- Recomendações e Dicas de Descanso -->
+              <div class="rest-advice-box" id="restAdviceBox">
+                <i data-lucide="info"></i>
+                <p id="workloadAdviceText">Carregando análise...</p>
+              </div>
+            </div>
+
+            <!-- Botões de Ajuste Rápido de Atraso (Sugestão 4) -->
+            <div class="delay-controls-container" style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px;">
+              <span style="font-size: 13px; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 6px;"><i data-lucide="clock" style="width: 15px; color: #a78bfa;"></i> Atrasou hoje?</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-delay" id="btn-delay-15" style="padding: 5px 10px; font-size: 12px; border: 1px solid rgba(167, 139, 250, 0.3); background: rgba(167, 139, 250, 0.05); color: #c084fc; border-radius: 8px; cursor: pointer; transition: all 0.2s;"><i data-lucide="chevrons-right" style="width: 12px; display: inline; vertical-align: middle;"></i> +15m</button>
+                <button class="btn-delay" id="btn-delay-30" style="padding: 5px 10px; font-size: 12px; border: 1px solid rgba(167, 139, 250, 0.3); background: rgba(167, 139, 250, 0.05); color: #c084fc; border-radius: 8px; cursor: pointer; transition: all 0.2s;"><i data-lucide="chevrons-right" style="width: 12px; display: inline; vertical-align: middle;"></i> +30m</button>
+              </div>
+            </div>
+
+            <!-- Seleção de Dia da Semana (Carrossel rápido) -->
+            <div class="days-carousel" id="daysCarousel">
+              <!-- Gerado via JS -->
+            </div>
+
+            <!-- Lista de Tarefas -->
+            <div class="tasks-section">
+              <div class="section-title-row">
+                <h2>Rotina Fixa <span class="badge badge-purple" id="fixed-count">0</span></h2>
+              </div>
+              <div class="tasks-list" id="fixed-tasks-list">
+                <!-- Inserido dinamicamente -->
+                <div class="empty-state">Nenhuma tarefa fixa hoje</div>
+              </div>
+            </div>
+
+            <div class="tasks-section">
+              <div class="section-title-row">
+                <h2>Tarefas Adicionais <span class="badge badge-indigo" id="adhoc-count">0</span></h2>
+              </div>
+              <div class="tasks-list" id="adhoc-tasks-list">
+                <!-- Inserido dinamicamente -->
+                <div class="empty-state">Nenhuma tarefa adicional cadastrada</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Botão Global de Ação (FAB) -->
+          <button class="global-fab" data-target="page-new-task">
+            <i data-lucide="plus"></i>
+          </button>
+        </section>
+
+        <!-- Tela 2: Nova Tarefa -->
+        <section class="app-page" id="page-new-task">
+          <header class="app-header">
+            <h2 id="task-form-title">Novo Afazer</h2>
+          </header>
+          
+          <div class="page-content">
+            <form id="task-form" class="standard-form">
+              <div class="form-group">
+                <label for="task-title">Título do Afazer</label>
+                <input type="text" id="task-title" placeholder="Ex: Academia, Ir à Igreja, Trabalho..." required>
+              </div>
+
+              <div class="form-group">
+                <label>Responsável pelo Afazer</label>
+                <div class="owner-selector-pills">
+                  <button type="button" class="owner-pill active" data-owner="lucas">🙋‍♂️ Lucas</button>
+                  <button type="button" class="owner-pill" data-owner="bia">🙋‍♀️ Bia</button>
+                  <button type="button" class="owner-pill" data-owner="casal">💖 Casal</button>
+                </div>
+                <input type="hidden" id="task-owner" value="lucas">
+              </div>
+
+              <div class="form-group">
+                <label>Tipo de Afazer</label>
+                <div class="type-cards-selector">
+                  <div class="type-card active" data-type="adhoc" id="type-card-adhoc">
+                    <i data-lucide="calendar"></i>
+                    <div class="type-card-info">
+                      <strong>Avulso (Único)</strong>
+                      <span>Realizado uma vez no dia</span>
+                    </div>
+                  </div>
+                  <div class="type-card" data-type="fixed" id="type-card-fixed">
+                    <i data-lucide="repeat"></i>
+                    <div class="type-card-info">
+                      <strong>Fixo (Recorrente)</strong>
+                      <span>Trabalho, igreja, etc.</span>
+                    </div>
+                  </div>
+                </div>
+                <input type="hidden" id="task-type" value="adhoc">
+              </div>
+
+              <div class="form-group">
+                <label for="task-category">Categoria do Afazer</label>
+                <select id="task-category" class="standard-select">
+                  <option value="trabalho">💼 Trabalho</option>
+                  <option value="saude">💪 Saúde / Esporte</option>
+                  <option value="estudo">📚 Estudo</option>
+                  <option value="lazer">☕ Lazer / Descanso</option>
+                  <option value="domestico">🏠 Doméstico</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Duração do Afazer</label>
+                <div class="duration-picker-card">
+                  <div class="duration-input-box">
+                    <input type="number" id="task-duration-hours" min="0" max="24" value="1" required>
+                    <span>horas</span>
+                  </div>
+                  <div class="duration-separator">:</div>
+                  <div class="duration-input-box">
+                    <input type="number" id="task-duration-minutes" min="0" max="59" value="0" step="5" required>
+                    <span>minutos</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group col" id="task-date-group">
+                  <label for="task-date">Data do Afazer</label>
+                  <input type="date" id="task-date">
+                </div>
+                <div class="form-group col">
+                  <label for="task-time">Horário (Opcional)</label>
+                  <input type="time" id="task-time">
+                </div>
+              </div>
+
+              <!-- Configurações específicas para Tarefas Fixas -->
+              <div class="form-group" id="fixed-recurrence-group" style="display: none;">
+                <label>Dias de Recorrência</label>
+                <div class="weekday-selector">
+                  <button type="button" class="day-btn" data-day="0">D</button>
+                  <button type="button" class="day-btn" data-day="1">S</button>
+                  <button type="button" class="day-btn" data-day="2">T</button>
+                  <button type="button" class="day-btn" data-day="3">Q</button>
+                  <button type="button" class="day-btn" data-day="4">Q</button>
+                  <button type="button" class="day-btn" data-day="5">S</button>
+                  <button type="button" class="day-btn" data-day="6">S</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-container">
+                  <input type="checkbox" id="task-reminder" checked>
+                  <span class="checkmark"></span>
+                  Me lembrar por notificação
+                </label>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block" id="btn-save-task">
+                <i data-lucide="plus"></i> Adicionar à Agenda
+              </button>
+              <button type="button" class="btn btn-outline btn-block" id="btn-cancel-edit" style="display: none; margin-top: 8px;">
+                Cancelar
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <!-- Tela 3: Assistente de Limite -->
+        <section class="app-page" id="page-assistant">
+          <header class="app-header">
+            <h2>Assistente Flow</h2>
+          </header>
+          
+          <div class="page-content">
+            <div class="assistant-welcome">
+              <div class="avatar-glow">
+                <i data-lucide="sparkles" class="glow-icon"></i>
+              </div>
+              <h3>Análise de Rotina</h3>
+              <p>O algoritmo inteligente analisa a carga de tarefas fixas e sugere um limite diário saudável para evitar gargalos.</p>
+            </div>
+
+            <!-- Card de Análise da Rotina Fixa -->
+            <div class="card status-card">
+              <div class="analysis-row">
+                <span>Tarefas Fixas Cadastradas:</span>
+                <strong id="analysis-fixed-count">0</strong>
+              </div>
+              <div class="analysis-row">
+                <span>Tempo Ocupado Fixo Médio:</span>
+                <strong id="analysis-fixed-hours">0h por dia</strong>
+              </div>
+              <div class="analysis-row">
+                <span>Sugestão de Limite Saudável:</span>
+                <span class="glow-text" id="analysis-recommended-limit">8 horas</span>
+              </div>
+            </div>
+
+            <div class="limit-setting-section">
+              <h4>Limite de Horas de Afazeres</h4>
+              <div class="limit-controller">
+                <button class="btn-circle" id="btn-limit-minus"><i data-lucide="minus"></i></button>
+                <div class="limit-display">
+                  <span class="limit-value" id="current-limit-val">8</span>
+                  <span class="limit-unit">horas</span>
+                </div>
+                <button class="btn-circle" id="btn-limit-plus"><i data-lucide="plus"></i></button>
+              </div>
+              
+              <h4 style="margin-top: 15px;">Meta de Sono Diária</h4>
+              <div class="limit-controller">
+                <button class="btn-circle" id="btn-sleep-minus"><i data-lucide="minus"></i></button>
+                <div class="limit-display">
+                  <span class="limit-value" id="current-sleep-val">8</span>
+                  <span class="limit-unit">horas</span>
+                </div>
+                <button class="btn-circle" id="btn-sleep-plus"><i data-lucide="plus"></i></button>
+              </div>
+
+              <h4 style="margin-top: 15px;">Horário de Ir Dormir</h4>
+              <div class="duration-picker-card" style="margin-top: 5px; margin-bottom: 15px; width: 100%; max-width: 220px;">
+                <div class="duration-input-box">
+                  <input type="number" id="sleep-start-hours" min="0" max="23" value="23" required>
+                  <span>hora</span>
+                </div>
+                <div class="duration-separator" style="margin-bottom: 20px;">:</div>
+                <div class="duration-input-box">
+                  <input type="number" id="sleep-start-minutes" min="0" max="59" value="0" step="5" required>
+                  <span>minutos</span>
+                </div>
+              </div>
+              
+              <p class="limit-helper-text">Sua meta de sono e tarefas determinam seu tempo livre de descanso no Dashboard.</p>
+              <button class="btn btn-outline btn-block" id="btn-recalculate" style="margin-top: 10px;">
+                <i data-lucide="refresh-cw"></i> Recalcular Recomendação
+              </button>
+            </div>
+
+            <!-- Painel de Configurações de Sincronização em Nuvem (Onda 10) -->
+            <div class="card sync-setting-card" style="margin-top: 20px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 16px; border-radius: 16px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                <i data-lucide="cloud-lightning" style="color: #a78bfa; width: 18px; height: 18px;"></i>
+                <h4 style="margin: 0; font-size: 15px; color: rgba(255, 255, 255, 0.9);">Sincronização em Nuvem</h4>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label for="sync-provider" style="font-size: 12px; margin-bottom: 6px; color: rgba(255,255,255,0.6);">Provedor de Nuvem</label>
+                <select id="sync-provider" class="standard-select" style="width: 100%; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 0 10px;">
+                  <option value="none">Desativado (Apenas local)</option>
+                  <option value="gist">GitHub Gist (Recomendado)</option>
+                  <option value="firebase">Firebase Realtime DB</option>
+                </select>
+              </div>
+
+              <!-- Configurações do Gist -->
+              <div id="sync-gist-fields" style="display: none; gap: 10px; flex-direction: column;">
+                <div class="form-group">
+                  <label for="sync-gist-id" style="font-size: 12px; color: rgba(255,255,255,0.6);">Gist ID</label>
+                  <input type="text" id="sync-gist-id" placeholder="Ex: 8a9f02c61e4b38fa74dc2a912d..." style="width: 100%; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 0 10px; font-family: monospace; font-size: 12px;">
+                </div>
+                <div class="form-group">
+                  <label for="sync-gist-token" style="font-size: 12px; color: rgba(255,255,255,0.6);">Token do GitHub (Personal Access Token)</label>
+                  <input type="password" id="sync-gist-token" placeholder="Ex: ghp_xxxxxxxxxxxxxxxxxxxx" style="width: 100%; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 0 10px; font-size: 12px;">
+                </div>
+                <div style="font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.4; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
+                  💡 <strong>Como usar:</strong> Crie um Gist no <a href="https://gist.github.com" target="_blank" style="color: #a78bfa; text-decoration: underline;">gist.github.com</a> com um arquivo <code>routineflow_state.json</code> contendo <code>{}</code>. Depois, gere um token com permissão de "gist" em <a href="https://github.com/settings/tokens" target="_blank" style="color: #a78bfa; text-decoration: underline;">github.com</a>. Cole ambos aqui.
+                </div>
+              </div>
+
+              <!-- Configurações do Firebase -->
+              <div id="sync-firebase-fields" style="display: none; gap: 10px; flex-direction: column;">
+                <div class="form-group">
+                  <label for="sync-firebase-url" style="font-size: 12px; color: rgba(255,255,255,0.6);">URL do Firebase Realtime DB</label>
+                  <input type="text" id="sync-firebase-url" placeholder="https://[projeto]-default-rtdb.firebaseio.com/state.json" style="width: 100%; height: 38px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 0 10px; font-size: 12px;">
+                </div>
+                <div style="font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.4; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
+                  💡 <strong>Como usar:</strong> Crie um banco Realtime DB no Firebase em "modo de teste" (regras de leitura e escrita públicas). Copie a URL do banco e cole aqui, adicionando <code>/state.json</code> ao final.
+                </div>
+              </div>
+
+              <div style="margin-top: 14px; display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-primary" id="btn-save-sync" style="flex: 1; height: 36px; font-size: 13px;">Salvar Ajustes</button>
+                <button class="btn btn-sm btn-outline" id="btn-trigger-sync" style="height: 36px; width: 36px; padding: 0; display: flex; align-items: center; justify-content: center;" title="Sincronizar agora">
+                  <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Habit Tracker e Consistência (Sugestão 2) -->
+            <div class="card habit-tracker-card" style="margin-top: 20px;">
+              <div class="habit-tracker-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">Consistência Semanal</h4>
+                <div class="streak-badge" id="streak-badge" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 20px;">
+                  <i data-lucide="flame" style="width: 14px; height: 14px; color: #f97316; fill: #f97316;"></i>
+                  <span id="streak-count" style="font-weight: 600; font-size: 12px; color: #fdba74;">0 dias</span>
+                </div>
+              </div>
+              
+              <!-- Gráfico de Conclusão Semanal -->
+              <div class="bar-chart-container" id="bar-chart-container" style="display: flex; justify-content: space-between; align-items: flex-end; height: 100px; padding: 10px 5px 0 5px; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+
+            <!-- Análise de Débito de Sono (Sugestão 5) -->
+            <div class="card sleep-debt-card" id="sleep-debt-card" style="margin-top: 15px; display: none; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(236, 72, 153, 0.05) 100%); border: 1px solid rgba(139, 92, 246, 0.2);">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <i data-lucide="moon" style="width: 16px; height: 16px; color: #a78bfa;"></i>
+                <h4 style="margin: 0; font-size: 14px; color: #ddd6fe;">Débito de Sono Acumulado</h4>
+              </div>
+              <p id="sleep-debt-text" style="font-size: 13px; line-height: 1.4; color: rgba(255,255,255,0.85); margin: 0;"></p>
+            </div>
+          </div>
+          </div>
+        </section>
+
+        <!-- Tela 4: Widget Simulado da Home Screen -->
+        <section class="app-page" id="page-widget">
+          <header class="app-header">
+            <h2>Tela Inicial (Widget)</h2>
+          </header>
+          
+          <div class="page-content widget-preview-screen">
+            <p class="widget-demo-hint">Este é um simulador do widget interativo que ficará na tela inicial do seu celular.</p>
+
+            <!-- MOCKUP DO WIDGET DE ROTINA -->
+            <div class="routine-widget-card">
+              <div class="widget-header">
+                <div class="widget-title-area">
+                  <span class="widget-icon-box"><i data-lucide="check-square"></i></span>
+                  <div>
+                    <h4>Hoje</h4>
+                    <span class="widget-subtitle" id="widget-date">Sex, 5 Jun</span>
+                  </div>
+                </div>
+                <!-- Barra de Progresso Circular -->
+                <div class="widget-progress">
+                  <svg class="progress-ring" width="36" height="36">
+                    <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.1)" stroke-width="3" fill="transparent" r="14" cx="18" cy="18"/>
+                    <circle class="progress-ring__circle" id="widgetProgressCircle" stroke="url(#widgetGrad)" stroke-width="3" fill="transparent" r="14" cx="18" cy="18" stroke-dasharray="88 88" stroke-dashoffset="88"/>
+                    <defs>
+                      <linearGradient id="widgetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#8b5cf6" />
+                        <stop offset="100%" stop-color="#ec4899" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <span class="widget-progress-text" id="widgetProgressText">0%</span>
+                </div>
+              </div>
+
+              <!-- Lista rápida do Widget -->
+              <div class="widget-tasks-list" id="widget-tasks-list">
+                <!-- Preenchido dinamicamente -->
+              </div>
+
+              <!-- Input Rápido do Widget (Adicionar sem abrir o app) -->
+              <div class="widget-quick-add">
+                <input type="text" id="widget-quick-title" placeholder="Adicionar tarefa rápida para hoje...">
+                <button id="btn-widget-quick-add"><i data-lucide="plus"></i></button>
+              </div>
+            </div>
+
+            <!-- Botões Extras Simulados para o mock de tela de celular -->
+            <div class="simulated-app-icons">
+              <div class="app-icon-item">
+                <div class="app-icon-logo"><i data-lucide="message-square"></i></div>
+                <span>Chat</span>
+              </div>
+              <div class="app-icon-item">
+                <div class="app-icon-logo"><i data-lucide="phone"></i></div>
+                <span>Telefone</span>
+              </div>
+              <div class="app-icon-item active-app-icon" id="btn-return-app">
+                <div class="app-icon-logo gradient-logo-bg"><i data-lucide="sparkles"></i></div>
+                <span>RoutineFlow</span>
+              </div>
+              <div class="app-icon-item">
+                <div class="app-icon-logo"><i data-lucide="chrome"></i></div>
+                <span>Internet</span>
+              </div>
+            </div>
+          </div>
+          <!-- Botão Global de Ação (FAB) no Widget -->
+          <button class="global-fab" data-target="page-new-task">
+            <i data-lucide="plus"></i>
+          </button>
+        </section>
+
+      </main>
+
+      <!-- BARRA DE NAVEGAÇÃO DO APLICATIVO -->
+      <nav class="app-navbar" id="appNavbar">
+        <button class="nav-item active" data-target="page-dashboard">
+          <i data-lucide="calendar"></i>
+          <span>Agenda</span>
+        </button>
+        <button class="nav-item" data-target="page-new-task">
+          <i data-lucide="plus-circle"></i>
+          <span>Novo</span>
+        </button>
+        <button class="nav-item" data-target="page-assistant">
+          <i data-lucide="sparkles"></i>
+          <span>Assistente</span>
+        </button>
+        <button class="nav-item" data-target="page-widget">
+          <i data-lucide="layout"></i>
+          <span>Widget</span>
+        </button>
+      </nav>
+
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMAÇÃO DE SOBRECARGA / AJUSTE DE LIMITE -->
+  <div class="modal-overlay" id="overloadModal">
+    <div class="modal-card">
+      <div class="modal-icon-alert">
+        <i data-lucide="alert-triangle"></i>
+      </div>
+      <h3>Alerta de Gargalo!</h3>
+      <p id="overloadModalText">
+        A tarefa que você está tentando adicionar fará com que o seu dia atinja <strong>X horas</strong> de atividades, ultrapassando seu limite diário saudável de <strong>Y horas</strong>.
+      </p>
+      
+      <div class="modal-options">
+        <button class="btn btn-warning btn-block" id="btn-modal-add-anyway">Adicionar mesmo assim</button>
+        <button class="btn btn-primary btn-block" id="btn-modal-increase-limit">Aumentar meu limite de hoje</button>
+        <button class="btn btn-outline btn-block" id="btn-modal-cancel">Voltar e ajustar duração/data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE PROPOSTA DE LIMITE SAUDÁVEL DINÂMICO -->
+  <div class="modal-overlay" id="proposalModal">
+    <div class="modal-card">
+      <div class="modal-icon-sparkles">
+        <i data-lucide="sparkles"></i>
+      </div>
+      <h3>Nova Recomendação!</h3>
+      <p id="proposalModalText">
+        Com base na sua rotina fixa de tarefas hoje (X horas), o Assistente Flow sugere ajustar seu limite saudável de afazeres adicionais para <strong>Y horas</strong>.
+      </p>
+      
+      <div class="modal-options">
+        <button class="btn btn-primary btn-block" id="btn-proposal-accept">Aceitar e Aplicar</button>
+        <button class="btn btn-outline btn-block" id="btn-proposal-custom">Quero ajustar manualmente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFLITO DE HORÁRIO -->
+  <div class="modal-overlay" id="conflictModal">
+    <div class="modal-card">
+      <div class="modal-icon-alert" style="background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.2); color: var(--color-warning);">
+        <i data-lucide="clock"></i>
+      </div>
+      <h3>Conflito de Horário!</h3>
+      <p id="conflictModalText">
+        Você já tem o afazer <strong>"Trabalho"</strong> marcado das <strong>14:00 às 18:00</strong> nesse dia.<br><br>
+        Deseja agendar <strong>"Nova Tarefa"</strong> (15:00 às 16:00) no mesmo período?
+      </p>
+      
+      <div class="modal-options">
+        <button class="btn btn-warning btn-block" id="btn-conflict-add-anyway">Sim, agendar mesmo assim</button>
+        <button class="btn btn-outline btn-block" id="btn-conflict-cancel">Voltar e ajustar horário</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts do App -->
+  <script src="app.js"></script>
+</body>
+</html>
