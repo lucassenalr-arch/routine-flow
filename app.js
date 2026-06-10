@@ -318,6 +318,7 @@ function getTasksForSelectedDate() {
   
   return state.tasks.filter(task => {
     if (task.deleted) return false;
+    if (task.exceptions && task.exceptions.includes(state.selectedDate)) return false;
     
     let isForDate = false;
     if (task.type === 'fixed') {
@@ -472,22 +473,34 @@ function toggleTaskCompletion(taskId) {
   }
 }
 
-// Deletar tarefa (Soft Delete para sincronização offline robusta)
+// Deletar tarefa (com suporte a exclusão temporária para tarefas fixas)
 function deleteTask(taskId) {
-  state.tasks = state.tasks.map(t => {
-    if (t.id === taskId) {
-      return {
-        ...t,
-        deleted: true,
-        updatedAt: Date.now()
-      };
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  if (task.type === 'fixed') {
+    state.pendingDeleteTaskId = taskId;
+    const deleteFixedModal = document.getElementById('deleteFixedModal');
+    if (deleteFixedModal) {
+      deleteFixedModal.classList.add('active');
+      lucide.createIcons();
     }
-    return t;
-  });
-  saveState();
-  updateUI();
-  showToastNotification('Tarefa excluída', 'A agenda foi atualizada.');
-  syncWithCloud(); // Enviar a exclusão para a nuvem
+  } else {
+    // Adhoc tasks deleted permanently immediately
+    state.tasks = state.tasks.map(t => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          deleted: true,
+          updatedAt: Date.now()
+        };
+      }
+      return t;
+    });
+    saveState();
+    updateUI();
+    showToastNotification('Tarefa excluída', 'A agenda foi atualizada.');
+  }
 }
 
 // Iniciar a edição de uma tarefa
@@ -628,6 +641,7 @@ function getTasksForDate(targetDateStr, tasksList = state.tasks, profile = state
   return tasksList.filter(task => {
     // Filtrar fora tarefas soft-deletadas
     if (task.deleted) return false;
+    if (task.exceptions && task.exceptions.includes(targetDateStr)) return false;
 
     let isForDate = false;
     if (task.type === 'fixed') {
@@ -2436,6 +2450,101 @@ document.addEventListener('DOMContentLoaded', () => {
   if (syncStatusIcon) {
     syncStatusIcon.addEventListener('click', () => {
       syncWithCloud(true);
+    });
+  }
+
+  // --- ONDA 10: EXCLUSÃO TEMPORÁRIA DE TAREFAS FIXAS ---
+  const btnDeleteFixedToday = document.getElementById('btn-delete-fixed-today');
+  if (btnDeleteFixedToday) {
+    btnDeleteFixedToday.addEventListener('click', () => {
+      const taskId = state.pendingDeleteTaskId;
+      if (taskId) {
+        state.tasks = state.tasks.map(t => {
+          if (t.id === taskId) {
+            const exceptions = t.exceptions || [];
+            if (!exceptions.includes(state.selectedDate)) {
+              exceptions.push(state.selectedDate);
+            }
+            return {
+              ...t,
+              exceptions,
+              updatedAt: Date.now()
+            };
+          }
+          return t;
+        });
+        saveState();
+        updateUI();
+        showToastNotification('Agenda atualizada', 'Tarefa fixa removida de hoje.');
+        state.pendingDeleteTaskId = null;
+      }
+      document.getElementById('deleteFixedModal').classList.remove('active');
+    });
+  }
+
+  const btnDeleteFixedWeek = document.getElementById('btn-delete-fixed-week');
+  if (btnDeleteFixedWeek) {
+    btnDeleteFixedWeek.addEventListener('click', () => {
+      const taskId = state.pendingDeleteTaskId;
+      if (taskId) {
+        state.tasks = state.tasks.map(t => {
+          if (t.id === taskId) {
+            const exceptions = t.exceptions || [];
+            const start = new Date(state.selectedDate + 'T12:00:00');
+            for (let i = 0; i < 7; i++) {
+              const d = new Date(start.getTime());
+              d.setDate(start.getDate() + i);
+              const dateStr = formatDateString(d);
+              if (!exceptions.includes(dateStr)) {
+                exceptions.push(dateStr);
+              }
+            }
+            return {
+              ...t,
+              exceptions,
+              updatedAt: Date.now()
+            };
+          }
+          return t;
+        });
+        saveState();
+        updateUI();
+        showToastNotification('Agenda atualizada', 'Tarefa fixa pausada esta semana.');
+        state.pendingDeleteTaskId = null;
+      }
+      document.getElementById('deleteFixedModal').classList.remove('active');
+    });
+  }
+
+  const btnDeleteFixedPermanent = document.getElementById('btn-delete-fixed-permanent');
+  if (btnDeleteFixedPermanent) {
+    btnDeleteFixedPermanent.addEventListener('click', () => {
+      const taskId = state.pendingDeleteTaskId;
+      if (taskId) {
+        state.tasks = state.tasks.map(t => {
+          if (t.id === taskId) {
+            return {
+              ...t,
+              deleted: true,
+              updatedAt: Date.now()
+            };
+          }
+          return t;
+        });
+        saveState();
+        updateUI();
+        showToastNotification('Agenda atualizada', 'Tarefa fixa excluída permanentemente.');
+        state.pendingDeleteTaskId = null;
+      }
+      document.getElementById('deleteFixedModal').classList.remove('active');
+    });
+  }
+
+  const btnDeleteFixedCancel = document.getElementById('btn-delete-fixed-cancel');
+  if (btnDeleteFixedCancel) {
+    btnDeleteFixedCancel.addEventListener('click', () => {
+      state.pendingDeleteTaskId = null;
+      document.getElementById('deleteFixedModal').classList.remove('active');
     });
   }
 

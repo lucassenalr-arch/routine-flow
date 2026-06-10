@@ -605,6 +605,26 @@
     </div>
   </div>
 
+  <!-- MODAL DE EXCLUSÃO DE TAREFA FIXA -->
+  <div class="modal-overlay" id="deleteFixedModal">
+    <div class="modal-card">
+      <div class="modal-icon-alert" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--color-danger);">
+        <i data-lucide="trash-2"></i>
+      </div>
+      <h3>Excluir Rotina Fixa</h3>
+      <p id="deleteFixedModalText">
+        Este é um afazer recorrente. Deseja remover de toda a sua rotina ou apenas temporariamente?
+      </p>
+      
+      <div class="modal-options">
+        <button class="btn btn-outline btn-block" id="btn-delete-fixed-today">Tirar apenas hoje</button>
+        <button class="btn btn-outline btn-block" id="btn-delete-fixed-week">Pausar esta semana (7 dias)</button>
+        <button class="btn btn-warning btn-block" id="btn-delete-fixed-permanent">Excluir permanentemente</button>
+        <button class="btn btn-outline btn-block" id="btn-delete-fixed-cancel" style="margin-top: 8px;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts do App -->
   <script src="app.js"></script>
 </body>
