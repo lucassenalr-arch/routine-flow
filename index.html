@@ -292,6 +292,20 @@
                 </label>
               </div>
 
+              <div class="form-group" id="reminder-offset-group" style="margin-top: 8px;">
+                <label for="task-reminder-offset" style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 6px; display: block;">Antecedência do lembrete</label>
+                <select id="task-reminder-offset" class="form-control" style="width: 100%;">
+                  <option value="0">No horário do afazer</option>
+                  <option value="5">5 minutos antes</option>
+                  <option value="10" selected>10 minutos antes</option>
+                  <option value="15">15 minutos antes</option>
+                  <option value="30">30 minutos antes</option>
+                  <option value="60">1 hora antes</option>
+                  <option value="90">1 hora e 30 minutos antes</option>
+                </select>
+              </div>
+
+
               <button type="submit" class="btn btn-primary btn-block" id="btn-save-task">
                 <i data-lucide="plus"></i> Adicionar à Agenda
               </button>
@@ -422,6 +436,34 @@
                 </button>
               </div>
             </div>
+
+            <!-- Sincronização com Calendário do Celular (Onda 11) -->
+            <div class="card calendar-setting-card" id="calendar-setting-card" style="margin-top: 20px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 16px; border-radius: 16px; display: none;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                <i data-lucide="calendar" style="color: #34d399; width: 18px; height: 18px;"></i>
+                <h4 style="margin: 0; font-size: 15px; color: rgba(255, 255, 255, 0.9);">Integração com Agenda do Celular</h4>
+              </div>
+              <p style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.4; margin-bottom: 12px;">
+                Você pode sincronizar as tarefas do RoutineFlow com o <strong>Google Agenda</strong> ou <strong>Apple Calendário</strong>. Elas aparecerão como eventos e tocarão alarmes no horário correto, mesmo com o app fechado!
+              </p>
+              
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label style="font-size: 11px; color: rgba(255,255,255,0.5); display: block; margin-bottom: 4px;">Link de Assinatura do Calendário (.ics)</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="calendar-link-input" readonly style="flex: 1; height: 36px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.8); padding: 0 10px; font-family: monospace; font-size: 11px;" value="Aguardando sincronização...">
+                  <button class="btn btn-sm btn-primary" id="btn-copy-calendar-link" style="height: 36px; padding: 0 12px; font-size: 12px; display: flex; align-items: center; gap: 4px; border: none; border-radius: 8px; cursor: pointer;">
+                    <i data-lucide="copy" style="width: 14px; height: 14px;"></i> Copiar
+                  </button>
+                </div>
+              </div>
+
+              <div style="font-size: 11px; color: rgba(255,255,255,0.55); line-height: 1.4; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                <strong>Como assinar no celular:</strong><br>
+                • <strong>iPhone:</strong> Vá em Ajustes > Calendário > Contas > Adicionar Conta > Outra > Adicionar Calendário Assinado, e cole o link acima.<br>
+                • <strong>Google Agenda:</strong> Pelo computador, acesse seu Google Agenda, no menu lateral clique em "+" ao lado de "Outros agendas" > "Do URL", cole o link e salve. Ele aparecerá no seu celular automaticamente.
+              </div>
+            </div>
+
 
             <!-- Habit Tracker e Consistência (Sugestão 2) -->
             <div class="card habit-tracker-card" style="margin-top: 20px;">

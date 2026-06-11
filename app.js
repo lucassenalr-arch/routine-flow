@@ -308,6 +308,7 @@ function updateUI() {
   renderWidget();
   calculateWorkload();
   updateAssistantPage();
+  updateCalendarLinkUI();
   lucide.createIcons();
 }
 
@@ -566,7 +567,14 @@ function startEditTask(taskId) {
   
   // Configurar horário e lembrete
   document.getElementById('task-time').value = task.time || '';
-  document.getElementById('task-reminder').checked = !!task.reminder;
+  const hasReminder = !!task.reminder;
+  document.getElementById('task-reminder').checked = hasReminder;
+  
+  const reminderOffsetGroup = document.getElementById('reminder-offset-group');
+  if (reminderOffsetGroup) {
+    reminderOffsetGroup.style.display = hasReminder ? 'block' : 'none';
+  }
+  document.getElementById('task-reminder-offset').value = task.reminderOffset !== undefined ? task.reminderOffset : 10;
   
   // Alterar layout da tela para edição
   document.getElementById('task-form-title').innerText = 'Editar Afazer';
@@ -605,6 +613,14 @@ function resetForm() {
       pill.classList.remove('active');
     }
   });
+
+  // Resetar campos de lembrete
+  const taskReminder = document.getElementById('task-reminder');
+  const reminderOffsetGroup = document.getElementById('reminder-offset-group');
+  if (taskReminder) taskReminder.checked = true;
+  if (reminderOffsetGroup) reminderOffsetGroup.style.display = 'block';
+  const reminderOffsetSelect = document.getElementById('task-reminder-offset');
+  if (reminderOffsetSelect) reminderOffsetSelect.value = '10';
 }
 
 // Cancelar a edição e restaurar layout
@@ -1516,6 +1532,7 @@ taskForm.addEventListener('submit', (e) => {
   const time = document.getElementById('task-time').value;
   const dateInput = document.getElementById('task-date').value;
   const reminder = document.getElementById('task-reminder').checked;
+  const reminderOffset = parseInt(document.getElementById('task-reminder-offset').value) || 0;
   const owner = document.getElementById('task-owner').value || 'lucas';
   
   // Data alvo da tarefa
@@ -1541,6 +1558,7 @@ taskForm.addEventListener('submit', (e) => {
     updatedAt: Date.now(),
     time: time || null,
     reminder,
+    reminderOffset,
     completed: existingTask ? existingTask.completed : {},
     completedToday: existingTask ? existingTask.completedToday : false
   };
@@ -1653,6 +1671,14 @@ function saveNewTask(taskObj) {
   taskForm.reset();
   dayButtons.forEach(btn => btn.classList.remove('selected'));
   state.recWeekdays = [];
+
+  // Resetar campos de lembrete
+  const taskReminder = document.getElementById('task-reminder');
+  const reminderOffsetGroup = document.getElementById('reminder-offset-group');
+  if (taskReminder) taskReminder.checked = true;
+  if (reminderOffsetGroup) reminderOffsetGroup.style.display = 'block';
+  const reminderOffsetSelect = document.getElementById('task-reminder-offset');
+  if (reminderOffsetSelect) reminderOffsetSelect.value = '10';
   
   // Restaurar layout do form
   document.getElementById('task-form-title').innerText = 'Novo Afazer';
@@ -1770,6 +1796,14 @@ async function syncWithCloud(forceManual = false) {
       }
       
       const gistData = await response.json();
+      
+      // Salvar username no state local para construir a URL do calendário
+      if (gistData.owner && gistData.owner.login) {
+        if (!state.syncConfig) state.syncConfig = {};
+        state.syncConfig.gistUsername = gistData.owner.login;
+        saveStateLocally();
+      }
+      
       const file = gistData.files && gistData.files['routineflow_state.json'];
       if (file && file.content) {
         try {
@@ -1827,6 +1861,9 @@ async function syncWithCloud(forceManual = false) {
           files: {
             'routineflow_state.json': {
               'content': mergedContent
+            },
+            'routineflow_calendar.ics': {
+              'content': generateICalendarString()
             }
           }
         })
@@ -2121,19 +2158,34 @@ function startNotificationScheduler() {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     
-    // 1. Lembretes de tarefas agendadas para hoje: 1h30 (90 minutos) antes do compromisso
+    // 1. Lembretes de tarefas agendadas para hoje baseados na antecedência customizada
     todaysTasks.forEach(task => {
       if (!task.time || !task.reminder) return;
       
       const [taskHour, taskMinute] = task.time.split(':').map(Number);
-      const nowInMinutes = currentHour * 60 + currentMinute;
-      const taskInMinutes = taskHour * 60 + taskMinute;
-      const diff = taskInMinutes - nowInMinutes;
+      const taskTimeToday = new Date(now.getTime());
+      taskTimeToday.setHours(taskHour, taskMinute, 0, 0);
       
-      // Faltando entre 88 e 90 minutos
-      const notificationKey = `task-${task.id}-90min`;
-      if (diff >= 88 && diff <= 90 && state.notifiedTasks[notificationKey] !== currentDateStr) {
-        triggerNotification('Compromisso em breve', `Seu afazer "${task.title}" começará em 1h30 (às ${task.time})!`);
+      const offset = task.reminderOffset !== undefined ? task.reminderOffset : 10;
+      const triggerTime = new Date(taskTimeToday.getTime() - offset * 60 * 1000);
+      
+      const diffMs = now.getTime() - triggerTime.getTime();
+      const notificationKey = `task-${task.id}-${offset}`;
+      
+      // Se passou da hora do lembrete e foi há menos de 15 minutos (tolerância contra throttling),
+      // e ainda não notificamos hoje
+      if (diffMs >= 0 && diffMs <= 15 * 60 * 1000 && state.notifiedTasks[notificationKey] !== currentDateStr) {
+        let timeText = `em ${offset} min`;
+        if (offset === 0) timeText = 'agora';
+        else if (offset === 60) timeText = 'em 1h';
+        else if (offset === 90) timeText = 'em 1h30';
+        
+        const title = offset === 0 ? 'Compromisso agora' : 'Compromisso em breve';
+        const bodyText = offset === 0 
+          ? `Seu afazer "${task.title}" começa agora (às ${task.time})!`
+          : `Seu afazer "${task.title}" começará ${timeText} (às ${task.time})!`;
+          
+        triggerNotification(title, bodyText);
         state.notifiedTasks[notificationKey] = currentDateStr;
         saveState();
       }
@@ -2253,7 +2305,7 @@ async function rescheduleAllNotificationTriggers() {
     }
   }
 
-  // 4. Agendar Avisos das Tarefas (1h30 antes) para os próximos 7 dias
+  // 4. Agendar Avisos das Tarefas para os próximos 7 dias
   for (let i = 0; i < 7; i++) {
     try {
       const targetDate = new Date();
@@ -2261,19 +2313,30 @@ async function rescheduleAllNotificationTriggers() {
       const dateStr = formatDateString(targetDate);
       const dayTasks = getTasksForDate(dateStr);
 
-      const scheduledTasks = dayTasks.filter(t => t.time);
+      // Apenas tarefas com horário e que tenham lembrete ativado (reminder !== false)
+      const scheduledTasks = dayTasks.filter(t => t.time && t.reminder !== false);
 
       for (const task of scheduledTasks) {
         const [th, tm] = task.time.split(':').map(Number);
         const taskTime = new Date(targetDate.getTime());
         taskTime.setHours(th, tm, 0, 0);
 
-        // Subtrair 1 hora e 30 minutos (90 minutos)
-        const triggerTime = new Date(taskTime.getTime() - 90 * 60 * 1000);
+        const offset = task.reminderOffset !== undefined ? task.reminderOffset : 10;
+        const triggerTime = new Date(taskTime.getTime() - offset * 60 * 1000);
 
         if (triggerTime.getTime() > Date.now()) {
-          await reg.showNotification('Compromisso em breve', {
-            body: `Seu afazer "${task.title}" começará em 1h30 (às ${task.time})!`,
+          let timeText = `em ${offset} min`;
+          if (offset === 0) timeText = 'agora';
+          else if (offset === 60) timeText = 'em 1h';
+          else if (offset === 90) timeText = 'em 1h30';
+          
+          const title = offset === 0 ? 'Compromisso agora' : 'Compromisso em breve';
+          const bodyText = offset === 0 
+            ? `Seu afazer "${task.title}" começa agora (às ${task.time})!`
+            : `Seu afazer "${task.title}" começará ${timeText} (às ${task.time})!`;
+
+          await reg.showNotification(title, {
+            body: bodyText,
             icon: 'icon.png',
             badge: 'icon.png',
             vibrate: [300, 100, 300, 100, 300],
@@ -2313,6 +2376,30 @@ document.addEventListener('DOMContentLoaded', () => {
   startNotificationScheduler();
   registerServiceWorker();
   
+  // Toggling de visualização da antecedência do lembrete no form
+  const taskReminder = document.getElementById('task-reminder');
+  const reminderOffsetGroup = document.getElementById('reminder-offset-group');
+  if (taskReminder && reminderOffsetGroup) {
+    taskReminder.addEventListener('change', () => {
+      reminderOffsetGroup.style.display = taskReminder.checked ? 'block' : 'none';
+    });
+  }
+
+  // Botão de copiar link do calendário
+  const btnCopyCalendarLink = document.getElementById('btn-copy-calendar-link');
+  if (btnCopyCalendarLink) {
+    btnCopyCalendarLink.addEventListener('click', () => {
+      const calendarLinkInput = document.getElementById('calendar-link-input');
+      if (calendarLinkInput && calendarLinkInput.value && calendarLinkInput.value !== 'Aguardando sincronização...') {
+        navigator.clipboard.writeText(calendarLinkInput.value).then(() => {
+          showToastNotification('Link Copiado!', 'O link do calendário foi copiado para a área de transferência.');
+        }).catch(err => {
+          console.error('Erro ao copiar link:', err);
+        });
+      }
+    });
+  }
+
   // Registrar cliques nos botões flutuantes globais (FAB)
   document.querySelectorAll('.global-fab').forEach(fab => {
     fab.addEventListener('click', () => {
@@ -2791,5 +2878,118 @@ function delayUpcomingTasks(minutes) {
     showToastNotification('Agenda Ajustada!', `${shiftedCount} compromisso(s) adiado(s) em +${minutes} min.`);
   } else {
     showToastNotification('Nenhuma tarefa', 'Não encontramos compromissos pendentes hoje para adiar.');
+  }
+}
+
+// ==========================================
+// INTEGRAÇÃO DE CALENDÁRIO (.ICS)
+// ==========================================
+function generateICalendarString() {
+  let ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//RoutineFlow//Calendar Feed//PT',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH'
+  ];
+
+  const escapeICS = (str) => {
+    if (!str) return '';
+    return str.replace(/\\/g, '\\\\')
+              .replace(/,/g, '\\,')
+              .replace(/;/g, '\\;')
+              .replace(/\n/g, '\\n')
+              .replace(/\r/g, '');
+  };
+
+  const formatICSDate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    return `${y}${m}${d}T${hh}${mm}${ss}`;
+  };
+
+  const weekdaysMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+  state.tasks.forEach(task => {
+    if (task.deleted) return;
+
+    const reminderOffset = task.reminderOffset !== undefined ? task.reminderOffset : 10;
+    const timeStr = task.time || '08:00';
+    const [hour, minute] = timeStr.split(':').map(Number);
+    const durationHours = task.duration || 1;
+
+    if (task.type === 'fixed') {
+      if (!task.weekdays || task.weekdays.length === 0) return;
+      task.weekdays.forEach(wd => {
+        // Jan 4, 2026 is Sunday (day 0)
+        const startDate = new Date(2026, 0, 4 + wd, hour, minute, 0);
+        const endDate = new Date(startDate.getTime() + durationHours * 60 * 60 * 1000);
+
+        ics.push('BEGIN:VEVENT');
+        ics.push(`UID:fixed-${task.id}-${wd}@routineflow.app`);
+        ics.push(`DTSTAMP:${formatICSDate(new Date())}Z`);
+        ics.push(`DTSTART:${formatICSDate(startDate)}`);
+        ics.push(`DTEND:${formatICSDate(endDate)}`);
+        ics.push(`RRULE:FREQ=WEEKLY;BYDAY=${weekdaysMap[wd]}`);
+        ics.push(`SUMMARY:${escapeICS(task.title)}`);
+        ics.push(`DESCRIPTION:Responsável: ${escapeICS(task.assignedTo)} | Categoria: ${escapeICS(task.category)}`);
+        
+        if (task.reminder !== false) {
+          ics.push('BEGIN:VALARM');
+          ics.push(`TRIGGER:-PT${reminderOffset}M`);
+          ics.push('ACTION:DISPLAY');
+          ics.push(`DESCRIPTION:Lembrete: ${escapeICS(task.title)}`);
+          ics.push('END:VALARM');
+        }
+        ics.push('END:VEVENT');
+      });
+    } else {
+      if (!task.date) return;
+      const [year, month, day] = task.date.split('-').map(Number);
+      const startDate = new Date(year, month - 1, day, hour, minute, 0);
+      const endDate = new Date(startDate.getTime() + durationHours * 60 * 60 * 1000);
+
+      ics.push('BEGIN:VEVENT');
+      ics.push(`UID:adhoc-${task.id}@routineflow.app`);
+      ics.push(`DTSTAMP:${formatICSDate(new Date())}Z`);
+      ics.push(`DTSTART:${formatICSDate(startDate)}`);
+      ics.push(`DTEND:${formatICSDate(endDate)}`);
+      ics.push(`SUMMARY:${escapeICS(task.title)}`);
+      ics.push(`DESCRIPTION:Responsável: ${escapeICS(task.assignedTo)} | Categoria: ${escapeICS(task.category)}`);
+      
+      if (task.reminder !== false) {
+        ics.push('BEGIN:VALARM');
+        ics.push(`TRIGGER:-PT${reminderOffset}M`);
+        ics.push('ACTION:DISPLAY');
+        ics.push(`DESCRIPTION:Lembrete: ${escapeICS(task.title)}`);
+        ics.push('END:VALARM');
+      }
+      ics.push('END:VEVENT');
+    }
+  });
+
+  ics.push('END:VCALENDAR');
+  return ics.join('\r\n');
+}
+
+function updateCalendarLinkUI() {
+  const calendarSettingCard = document.getElementById('calendar-setting-card');
+  const calendarLinkInput = document.getElementById('calendar-link-input');
+  
+  if (state.syncConfig && state.syncConfig.provider === 'gist' && state.syncConfig.gistId) {
+    if (calendarSettingCard) calendarSettingCard.style.display = 'block';
+    
+    const username = state.syncConfig.gistUsername || 'seu-usuario';
+    const calendarUrl = `https://gist.githubusercontent.com/${username}/${state.syncConfig.gistId}/raw/routineflow_calendar.ics`;
+    
+    if (calendarLinkInput) {
+      calendarLinkInput.value = calendarUrl;
+    }
+  } else {
+    if (calendarSettingCard) calendarSettingCard.style.display = 'none';
   }
 }
